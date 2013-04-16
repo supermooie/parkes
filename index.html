@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - collada</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+
+			a { color: skyblue }
+		</style>
+	</head>
+	<body>
+		<div id="info">
+			CSIRO Parkes Telescope | eResearch Visualisation
+		</div>
+
+
+		<script src="build/three.min.js"></script>
+
+		<script src="js/loaders/ColladaLoader.js"></script>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script src="js/renderers/WebGLDeferredRenderer.js"></script>
+		<script src="js/ShaderDeferred.js"></script>
+
+		<script src="js/shaders/CopyShader.js"></script>
+		<script src="js/shaders/FXAAShader.js"></script>
+
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+		<script src="js/postprocessing/ShaderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+
+		<script src="js/controls/TrackballControls.js"></script>
+
+
+		<script>
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+
+			var camera, scene, renderer, objects;
+			var pointLight;
+			var dae;
+			var rotations = new Array(90);
+			var xTranslates = new Array(90);
+			var yTranslates = new Array(90);
+			var numSteps = 30;
+
+			var rotations2 = [];
+			var xTranslates2 = [];
+			var yTranslates2 = [];
+
+			var loader = new THREE.ColladaLoader();
+			loader.options.convertUpAxis = true;
+			loader.load( './models/dishHierarchyFlat.dae', function ( collada ) {
+
+				dae = collada.scene;
+				skin = collada.skins[ 0 ];
+
+				dae.useQuaternion = false;
+
+				dae.scale.x = dae.scale.y = dae.scale.z = 0.05; // dish
+				dae.rotation.x = Math.PI / 2;
+
+				//  Fix import rotation of the dish hinge.
+				var pDishHinge2 = dae.getChildByName("pDishHinge2", true);
+				pDishHinge2.useQuaternion = false;
+				pDishHinge2.rotation.z = 270 * (Math.PI/180);
+
+        dae.translateZ(2);
+
+				dae.updateMatrix();
+
+				init();
+				animate();
+
+			} );
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.set( 1, 2, 7 );
+
+				scene = new THREE.Scene();
+
+				// Add the COLLADA
+
+				scene.add( dae );
+
+				// Lights
+				scene.add( new THREE.AmbientLight( 0xcccccc ) );
+
+				var directionalLight = new THREE.DirectionalLight(/*Math.random() * 0xffffff*/0xeeeeee );
+				directionalLight.position.x = 0.5;
+				directionalLight.position.y = -0.5;
+				directionalLight.position.z = 5;
+				directionalLight.position.normalize();
+
+				scene.add( directionalLight );
+
+				pointLight = new THREE.PointLight( 0xffffff, 0.5 );
+				pointLight.position.set( 50, 50, 0 );
+				scene.add( pointLight );
+
+				renderer = new THREE.WebGLDeferredRenderer( { antialias: false} );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls = new THREE.TrackballControls( camera, renderer.domElement );
+				controls.rotateSpeed = 0.5;
+				controls.addEventListener( 'change', render );
+
+				container.appendChild( renderer.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			var t = 0;
+			var clock = new THREE.Clock();
+			var iRotate = 0;
+
+			function animate() {
+				var delta = clock.getDelta();
+				requestAnimationFrame( animate );
+
+				controls.update();
+
+				if ( t > 1 ) t = 0;
+				t += delta;
+
+				render();
+				stats.update();
+			}
+
+			function render() {
+				var baseLevel = dae.getChildByName("pBase", true);
+				baseLevel.useQuaternion = false;
+				baseLevel.rotation.z += 0.001;
+
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
+</html>
